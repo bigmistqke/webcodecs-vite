@@ -1,0 +1,74 @@
+<!doctype html>
+<style>
+  body {
+    font-family: sans-serif;
+    color: #444;
+    font-weight: 300;
+    font-size:  larger;
+  }
+  button {
+    font-size: larger;
+  }
+  #controls {
+    margin-bottom: 10px;
+  }
+  #loading {
+    font-size: 2em;
+  }
+  .monospace {
+    font-family: monospace;
+  }
+  div#container {
+    margin: 0 auto 0 auto;
+    max-width: 60em;
+    padding: 1em 1.5em 1.3em 1.5em;
+  }
+  canvas {
+    outline: 1px solid black;
+  }
+</style>
+<div id=container>
+  <p>
+    This sample combines WebCodecs and WebAudio to create a media player that
+    renders synchronized audio and video.
+  </p>
+  <p>
+    Check out the <a href='../video-decode-display/'>Video Decoding and Display
+    </a> demo for a simpler introduction to video decoding and rendering. View
+    <a href='https://youtu.be/U8T5U8sN5d4?t=1572'>this video presentation</a>
+    for an overview of audio rendering stack.
+  </p>
+  <p>
+    This sample requires <a href='https://web.dev/cross-origin-isolation-guide'>
+    cross origin isolation</a> to use
+    <span class='monospace'>SharedArrayBuffer</span>. You may use
+    <span class='monospace'>node server.js</span> to host this sample locally
+    with the appropriate HTTP headers.
+  </p>
+  <div id=controls>
+    <p>
+      Video Codec:
+      <label for="video_codec_h264">
+        <input id="video_codec_h264" type="radio" name="video_codec" value="avc" checked> H.264
+      </label>
+      <label for="video_codec_h265">
+        <input id="video_codec_h265" type="radio" name="video_codec" value="hevc"> H.265
+      </label>
+      <label for="video_codec_vp8">
+        <input id="video_codec_vp8" type="radio" name="video_codec" value="vp8"> VP8
+      </label>
+      <label for="video_codec_vp9">
+        <input id="video_codec_vp9" type="radio" name="video_codec" value="vp9"> VP9
+      </label>
+      <label for="video_codec_av1">
+        <input id="video_codec_av1" type="radio" name="video_codec" value="av1"> AV1
+      </label>
+    </p>
+    <button>Play</button>
+    <label for=volume>Volume</label>
+    <input id=volume type=range value=0.8 min=0 max=1.0 step=0.01 disabled></input>
+  </div>
+  <canvas width=1280 height=720></canvas>
+</div>
+<script type="module" src="./index.js" ></script>
+</html>
