@@ -7,18 +7,23 @@ class AudioSink extends AudioWorkletProcessor {
   mediaChannelCount: number
   deinterleaveBuffer: Float32Array
 
-  constructor(options: { processorOptions: { sab: SharedArrayBuffer; mediaChannelCount: any } }) {
+  constructor({
+    processorOptions: { sab, mediaChannelCount },
+  }: {
+    processorOptions: { sab: SharedArrayBuffer; mediaChannelCount: any }
+  }) {
     super()
-    let sab = options.processorOptions.sab
     this.consumerSide = new RingBuffer(sab, Float32Array)
-    this.mediaChannelCount = options.processorOptions.mediaChannelCount
+    this.mediaChannelCount = mediaChannelCount
     // https://www.w3.org/TR/webaudio/#render-quantum-size
     const RENDER_QUANTUM_SIZE = 128
     this.deinterleaveBuffer = new Float32Array(this.mediaChannelCount * RENDER_QUANTUM_SIZE)
   }
 
-  // Deinterleave audio data from input (linear Float32Array) to output, an
-  // array of Float32Array.
+  /**
+   * Deinterleave audio data from input (linear Float32Array) to output, an
+   * array of Float32Array.
+   */
   deinterleave(input: Float32Array, output: Array<Float32Array>) {
     let inputIdx = 0
     let outputChannelCount = output.length

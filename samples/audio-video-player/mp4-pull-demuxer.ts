@@ -16,7 +16,7 @@ function chunkInitFromSample(sample: unknown): EncodedVideoChunkInit {
 class MP4PullDemuxer {
   readySamples: Array<unknown> = []
 
-  #deferredReady: Defer
+  #deferredSample: Defer<unknown>
   fileUri: any
   selectedTrack?: any
   source: MP4Source
@@ -24,7 +24,7 @@ class MP4PullDemuxer {
 
   constructor(fileUri: any) {
     this.fileUri = fileUri
-    this.#deferredReady = defer()
+    this.#deferredSample = defer()
     this.source = new MP4Source(this.fileUri)
   }
 
@@ -49,7 +49,7 @@ class MP4PullDemuxer {
 
     this.source.start(this._onSamples.bind(this))
 
-    return this.#deferredReady.promise
+    return this.#deferredSample.promise
   }
 
   _onSamples(samples: unknown[]) {
@@ -65,8 +65,8 @@ class MP4PullDemuxer {
       `adding new ${samples.length} samples (first = ${firstSampleTime}). total = ${this.readySamples.length}`,
     )
 
-    if (!this.#deferredReady.resolved) {
-      this.#deferredReady.resolve(this.readySamples.shift())
+    if (!this.#deferredSample.resolved) {
+      this.#deferredSample.resolve(this.readySamples.shift())
     }
   }
 }

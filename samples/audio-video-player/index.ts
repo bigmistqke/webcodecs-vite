@@ -1,3 +1,4 @@
+import { debugLog } from '../lib/debug-log.ts'
 import { WebAudioController } from '../lib/web-audio-controller.ts'
 import Worker from './media-worker?worker'
 
@@ -57,10 +58,10 @@ playButton.onclick = async () => {
 
   // Enable play now that we're loaded
   if (playButton.innerText == 'Play') {
-    console.log('playback start')
+    debugLog('playback start')
 
     // Audio can only start in reaction to a user-gesture.
-    audioController.play().then(() => console.log('playback started'))
+    audioController.play().then(() => debugLog('playback started'))
     mediaWorker.postMessage({
       command: 'play',
       mediaTimeSecs: audioController.getMediaTimeInSeconds(),
@@ -71,11 +72,11 @@ playButton.onclick = async () => {
 
     playButton.innerText = 'Pause'
   } else {
-    console.log('playback pause')
+    debugLog('playback pause')
     // Resolves when audio has effectively stopped, this can take some time if
     // using bluetooth, for example.
     audioController.pause().then(() => {
-      console.log('playback paused')
+      debugLog('playback paused')
       // Wait to pause worker until context suspended to ensure we continue
       // filling audio buffer while audio is playing.
       mediaWorker.postMessage({ command: 'pause' })

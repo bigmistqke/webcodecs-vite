@@ -1,4 +1,5 @@
 import { AudioRenderer } from '../lib/audio-renderer.ts'
+import { debugLog } from '../lib/debug-log.ts'
 import { VideoRenderer } from '../lib/video-renderer.ts'
 import { MP4PullAudioDemuxer, MP4PullVideoDemuxer } from './mp4-pull-demuxer.ts'
 
@@ -21,7 +22,7 @@ function getMediaTimeMicroSeconds() {
 }
 
 self.addEventListener('message', async function (e) {
-  console.info(`Worker message: ${JSON.stringify(e.data)}`)
+  debugLog(`Worker message: ${JSON.stringify(e.data)}`)
 
   switch (e.data.command) {
     case 'initialize':

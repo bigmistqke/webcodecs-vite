@@ -20,23 +20,20 @@ export class WebAudioController {
     this.audioContext.suspend()
     this.volumeGainNode = new GainNode(this.audioContext)
 
-    this.#initialize()
-  }
-
-  async #initialize() {
     // Make script modules available for execution by AudioWorklet.
-    await this.audioContext.audioWorklet.addModule(audiosink)
-    // Get an instance of the AudioSink worklet, passing it the memory for a
-    // ringbuffer, connect it to a GainNode for volume. This GainNode is in
-    // turn connected to the destination.
-    this.audioSink = new AudioWorkletNode(this.audioContext, 'AudioSink', {
-      processorOptions: {
-        sab: this.sharedArrayBuffer,
-        mediaChannelCount: this.channelCount,
-      },
-      outputChannelCount: [this.channelCount],
+    this.audioContext.audioWorklet.addModule(audiosink).then(async () => {
+      // Get an instance of the AudioSink worklet, passing it the memory for a
+      // ringbuffer, connect it to a GainNode for volume. This GainNode is in
+      // turn connected to the destination.
+      this.audioSink = new AudioWorkletNode(this.audioContext, 'AudioSink', {
+        processorOptions: {
+          sab: this.sharedArrayBuffer,
+          mediaChannelCount: this.channelCount,
+        },
+        outputChannelCount: [this.channelCount],
+      })
+      this.audioSink.connect(this.volumeGainNode).connect(this.audioContext.destination)
     })
-    this.audioSink.connect(this.volumeGainNode).connect(this.audioContext.destination)
   }
 
   setVolume(volume: number) {

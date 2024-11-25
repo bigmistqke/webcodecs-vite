@@ -3,7 +3,7 @@
 // The producer and the consumer can be on separate threads, but cannot change roles,
 // except with external synchronization.
 
-export type TypedArrayConstructor =
+type TypedArrayConstructor =
   | Int8ArrayConstructor
   | Uint8ArrayConstructor
   | Uint8ClampedArrayConstructor
@@ -15,6 +15,19 @@ export type TypedArrayConstructor =
   | Float64ArrayConstructor
   | BigInt64ArrayConstructor
   | BigUint64ArrayConstructor
+
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array
 
 export class RingBuffer {
   _type: TypedArrayConstructor
@@ -31,8 +44,11 @@ export class RingBuffer {
     var bytes = 8 + (capacity + 1) * type.BYTES_PER_ELEMENT
     return new SharedArrayBuffer(bytes)
   }
-  // `sab` is a SharedArrayBuffer with a capacity calculated by calling
-  // `getStorageForCapacity` with the desired capacity.
+
+  /**
+   * `sab` is a SharedArrayBuffer with a capacity calculated by calling
+   * `getStorageForCapacity` with the desired capacity.
+   */
   constructor(sab: SharedArrayBuffer, type: TypedArrayConstructor) {
     if (!ArrayBuffer.__proto__.isPrototypeOf(type) && type.BYTES_PER_ELEMENT !== undefined) {
       throw 'Pass a concrete typed array class as second argument'
@@ -50,53 +66,60 @@ export class RingBuffer {
     this.read_ptr = new Uint32Array(this.buf, 4, 1)
     this.storage = new type(this.buf, 8, this._capacity)
   }
-  // Returns the type of the underlying ArrayBuffer for this RingBuffer. This
-  // allows implementing crude type checking.
+  /**
+   * Returns the type of the underlying ArrayBuffer for this RingBuffer. This
+   * allows implementing crude type checking.
+   */
   type() {
     return this._type.name
   }
-  // Push bytes to the ring buffer. `elements` is a typed array of the same type
-  // as passed in the ctor, to be written to the queue.
-  // Returns the number of elements written to the queue.
-  push(elements: string | any[]) {
+
+  /**
+   * Push bytes to the ring buffer. `elements` is a typed array of the same type
+   * as passed in the ctor, to be written to the queue.
+   * Returns the number of elements written to the queue.
+   */
+  push(elements: TypedArray) {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
 
-    if ((wr + 1) % this._storage_capacity() == rd) {
+    if ((wr + 1) % this.#storage_capacity() == rd) {
       // full
       return 0
     }
 
-    let to_write = Math.min(this._available_write(rd, wr), elements.length)
-    let first_part = Math.min(this._storage_capacity() - wr, to_write)
+    let to_write = Math.min(this.#available_write(rd, wr), elements.length)
+    let first_part = Math.min(this.#storage_capacity() - wr, to_write)
     let second_part = to_write - first_part
 
-    this._copy(elements, 0, this.storage, wr, first_part)
-    this._copy(elements, first_part, this.storage, 0, second_part)
+    this.#copy(elements, 0, this.storage, wr, first_part)
+    this.#copy(elements, first_part, this.storage, 0, second_part)
 
     // publish the enqueued data to the other side
-    Atomics.store(this.write_ptr, 0, (wr + to_write) % this._storage_capacity())
+    Atomics.store(this.write_ptr, 0, (wr + to_write) % this.#storage_capacity())
 
     return to_write
   }
 
-  // Write bytes to the ring buffer using callbacks. This create wrapper
-  // objects and can GC, so it's best to no use this variant from a real-time
-  // thread such as an AudioWorklerProcessor `process` method.
-  // The callback is passed two typed arrays of the same type, to be filled.
-  // This allows skipping copies if the API that produces the data writes is
-  // passed arrays to write to, such as `AudioData.copyTo`.
+  /**
+   * Write bytes to the ring buffer using callbacks. This create wrapper
+   * objects and can GC, so it's best to no use this variant from a real-time
+   * thread such as an AudioWorklerProcessor `process` method.
+   * The callback is passed two typed arrays of the same type, to be filled.
+   * This allows skipping copies if the API that produces the data writes is
+   * passed arrays to write to, such as `AudioData.copyTo`.
+   */
   writeCallback(amount: number, cb: (first_part_buf: unknown, second_part_buf: unknown) => void) {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
 
-    if ((wr + 1) % this._storage_capacity() == rd) {
+    if ((wr + 1) % this.#storage_capacity() == rd) {
       // full
       return 0
     }
 
-    let to_write = Math.min(this._available_write(rd, wr), amount)
-    let first_part = Math.min(this._storage_capacity() - wr, to_write)
+    let to_write = Math.min(this.#available_write(rd, wr), amount)
+    let first_part = Math.min(this.#storage_capacity() - wr, to_write)
     let second_part = to_write - first_part
 
     // This part will cause GC: don't use in the real time thread.
@@ -106,15 +129,17 @@ export class RingBuffer {
     cb(first_part_buf, second_part_buf)
 
     // publish the enqueued data to the other side
-    Atomics.store(this.write_ptr, 0, (wr + to_write) % this._storage_capacity())
+    Atomics.store(this.write_ptr, 0, (wr + to_write) % this.#storage_capacity())
 
     return to_write
   }
 
-  // Read `elements.length` elements from the ring buffer. `elements` is a typed
-  // array of the same type as passed in the ctor.
-  // Returns the number of elements read from the queue, they are placed at the
-  // beginning of the array passed as parameter.
+  /**
+   * Read `elements.length` elements from the ring buffer. `elements` is a typed
+   * array of the same type as passed in the ctor.
+   * Returns the number of elements read from the queue, they are placed at the
+   * beginning of the array passed as parameter.
+   */
   pop(elements: Float32Array) {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
@@ -123,21 +148,23 @@ export class RingBuffer {
       return 0
     }
 
-    let to_read = Math.min(this._available_read(rd, wr), elements.length)
+    let to_read = Math.min(this.#available_read(rd, wr), elements.length)
 
-    let first_part = Math.min(this._storage_capacity() - rd, to_read)
+    let first_part = Math.min(this.#storage_capacity() - rd, to_read)
     let second_part = to_read - first_part
 
-    this._copy(this.storage, rd, elements, 0, first_part)
-    this._copy(this.storage, 0, elements, first_part, second_part)
+    this.#copy(this.storage, rd, elements, 0, first_part)
+    this.#copy(this.storage, 0, elements, first_part, second_part)
 
-    Atomics.store(this.read_ptr, 0, (rd + to_read) % this._storage_capacity())
+    Atomics.store(this.read_ptr, 0, (rd + to_read) % this.#storage_capacity())
 
     return to_read
   }
 
-  // True if the ring buffer is empty false otherwise. This can be late on the
-  // reader side: it can return true even if something has just been pushed.
+  /**
+   * True if the ring buffer is empty false otherwise. This can be late on the
+   * reader side: it can return true even if something has just been pushed.
+   */
   empty() {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
@@ -145,64 +172,76 @@ export class RingBuffer {
     return wr == rd
   }
 
-  // True if the ring buffer is full, false otherwise. This can be late on the
-  // write side: it can return true when something has just been popped.
+  /**
+   * True if the ring buffer is full, false otherwise. This can be late on the
+   * write side: it can return true when something has just been popped.
+   */
   full() {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
 
-    return (wr + 1) % this._storage_capacity() == rd
+    return (wr + 1) % this.#storage_capacity() == rd
   }
 
-  // The usable capacity for the ring buffer: the number of elements that can be
-  // stored.
+  /**
+   * The usable capacity for the ring buffer: the number of elements that can be
+   * stored.
+   */
   capacity() {
     return this._capacity - 1
   }
 
-  // Number of elements available for reading. This can be late, and report less
-  // elements that is actually in the queue, when something has just been
-  // enqueued.
+  /**
+   * Number of elements available for reading. This can be late, and report less
+   * elements that is actually in the queue, when something has just been
+   * enqueued.
+   */
   available_read() {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
-    return this._available_read(rd, wr)
+    return this.#available_read(rd, wr)
   }
 
-  // Number of elements available for writing. This can be late, and report less
-  // elements that is actually available for writing, when something has just
-  // been dequeued.
+  /**
+   * Number of elements available for writing. This can be late, and report less
+   * elements that is actually available for writing, when something has just
+   * been dequeued.
+   */
   available_write() {
     var rd = Atomics.load(this.read_ptr, 0)
     var wr = Atomics.load(this.write_ptr, 0)
-    return this._available_write(rd, wr)
+    return this.#available_write(rd, wr)
   }
 
   // private methods //
 
-  // Number of elements available for reading, given a read and write pointer..
-  _available_read(rd: number | bigint, wr: bigint) {
-    return (wr + this._storage_capacity() - rd) % this._storage_capacity()
+  /**  Number of elements available for reading, given a read and write pointer.. */
+  #available_read(rd: number, wr: number) {
+    return (wr + this.#storage_capacity() - rd) % this.#storage_capacity()
   }
 
-  // Number of elements available from writing, given a read and write pointer.
-  _available_write(rd: bigint, wr: bigint) {
-    return this.capacity() - this._available_read(rd, wr)
+  /** Number of elements available from writing, given a read and write pointer.  */
+  #available_write(rd: number, wr: number) {
+    return this.capacity() - this.#available_read(rd, wr)
   }
 
-  // The size of the storage for elements not accounting the space for the
-  // index, counting the empty slot.
-  _storage_capacity() {
+  /**
+   * The size of the storage for elements not accounting the space for the
+   * index, counting the empty slot.
+   */
+  #storage_capacity() {
     return this._capacity
   }
 
-  // Copy `size` elements from `input`, starting at offset `offset_input`, to
-  // `output`, starting at offset `offset_output`.
-  _copy(
-    input: { [x: string]: any },
-    offset_input: number | bigint,
-    output: { [x: string]: any },
-    offset_output: number | bigint,
+  /**
+   * Copy `size` elements from `input`, starting at offset `offset_input`, to
+   * `output`, starting at offset `offset_output`.
+   */
+  #copy(
+    input: TypedArray,
+    offset_input: number,
+    output: TypedArray,
+    offset_output: number,
     size: number,
   ) {
     for (var i = 0; i < size; i++) {

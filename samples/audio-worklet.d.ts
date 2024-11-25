@@ -28,4 +28,4 @@ declare class AudioWorkletProcessor {
  * @param name - A string name for the processor.
  * @param processorCtor - The constructor of the processor class.
  */
-declare function registerProcessor(name: string, processorCtor: typeof AudioWorkletProcessor): void
+declare function registerProcessor(name: string, processorCtor: unknown): void
