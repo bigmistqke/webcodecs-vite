@@ -1,10 +1,4 @@
-import audiosink from '../lib/audiosink.js?raw'
-import ringbuf from '../third_party/ringbufjs/ringbuf.js?raw'
-
-const workletSource = [ringbuf, audiosink].join('\n')
-const workletModule = URL.createObjectURL(
-  new Blob([workletSource], { type: 'application/javascript' }),
-)
+import audiosink from './audiosink.ts?url'
 
 // Simple wrapper class for creating AudioWorklet, connecting it to an
 // AudioContext, and controlling audio playback.
@@ -13,7 +7,11 @@ export class WebAudioController {
   audioSink?: AudioWorkletNode
   volumeGainNode: GainNode
 
-  constructor(sampleRate: number, channelCount: number, sharedArrayBuffer: SharedArrayBuffer) {
+  constructor(
+    sampleRate: number,
+    private channelCount: number,
+    private sharedArrayBuffer: SharedArrayBuffer,
+  ) {
     // Set up AudioContext to house graph of AudioNodes and control rendering.
     this.audioContext = new AudioContext({
       sampleRate: sampleRate,
@@ -22,21 +20,23 @@ export class WebAudioController {
     this.audioContext.suspend()
     this.volumeGainNode = new GainNode(this.audioContext)
 
-    // Make script modules available for execution by AudioWorklet.
+    this.#initialize()
+  }
 
-    this.audioContext.audioWorklet.addModule(workletModule).then(() => {
-      // Get an instance of the AudioSink worklet, passing it the memory for a
-      // ringbuffer, connect it to a GainNode for volume. This GainNode is in
-      // turn connected to the destination.
-      this.audioSink = new AudioWorkletNode(this.audioContext, 'AudioSink', {
-        processorOptions: {
-          sab: sharedArrayBuffer,
-          mediaChannelCount: channelCount,
-        },
-        outputChannelCount: [channelCount],
-      })
-      this.audioSink.connect(this.volumeGainNode).connect(this.audioContext.destination)
+  async #initialize() {
+    // Make script modules available for execution by AudioWorklet.
+    await this.audioContext.audioWorklet.addModule(audiosink)
+    // Get an instance of the AudioSink worklet, passing it the memory for a
+    // ringbuffer, connect it to a GainNode for volume. This GainNode is in
+    // turn connected to the destination.
+    this.audioSink = new AudioWorkletNode(this.audioContext, 'AudioSink', {
+      processorOptions: {
+        sab: this.sharedArrayBuffer,
+        mediaChannelCount: this.channelCount,
+      },
+      outputChannelCount: [this.channelCount],
     })
+    this.audioSink.connect(this.volumeGainNode).connect(this.audioContext.destination)
   }
 
   setVolume(volume: number) {

@@ -1,32 +1,14 @@
-import { AudioRenderer } from '../lib/audio_renderer'
-import { VideoRenderer } from '../lib/video_renderer'
-import { MP4PullDemuxer } from './mp4_pull_demuxer.ts'
+import { AudioRenderer } from '../lib/audio-renderer.ts'
+import { VideoRenderer } from '../lib/video-renderer.ts'
+import { MP4PullAudioDemuxer, MP4PullVideoDemuxer } from './mp4-pull-demuxer.ts'
 
-// The "media worker" houses and drives the AudioRenderer and VideoRenderer
-// classes to perform demuxing and decoder I/O on a background worker thread.
-console.info(`Worker started`)
-
-// Ideally we would use the static import { module } from ... syntax for this
-// and the modules below. But presently mp4box.js does not use ES6 modules,
-// so we import it as an old-style script and use the dynamic import() to load
-// our modules below.
-let moduleLoadedResolver = null
-let modulesReady = new Promise(resolver => (moduleLoadedResolver = resolver))
 let playing = false
-let audioRenderer = null
-let videoRenderer = null
+let audioRenderer: AudioRenderer
+let videoRenderer: VideoRenderer
 let lastMediaTimeSecs = 0
 let lastMediaTimeCapturePoint = 0
 
-;(async () => {
-  audioRenderer = new AudioRenderer()
-  videoRenderer = new VideoRenderer()
-  moduleLoadedResolver()
-  moduleLoadedResolver = null
-  console.info('Worker modules imported')
-})()
-
-function updateMediaTime(mediaTimeSecs, capturedAtHighResTimestamp) {
+function updateMediaTime(mediaTimeSecs: number, capturedAtHighResTimestamp: number) {
   lastMediaTimeSecs = mediaTimeSecs
   // Translate into Worker's time origin
   lastMediaTimeCapturePoint = capturedAtHighResTimestamp - performance.timeOrigin
@@ -39,23 +21,23 @@ function getMediaTimeMicroSeconds() {
 }
 
 self.addEventListener('message', async function (e) {
-  await modulesReady
-
   console.info(`Worker message: ${JSON.stringify(e.data)}`)
 
   switch (e.data.command) {
     case 'initialize':
-      let audioDemuxer = new MP4PullDemuxer(e.data.audioFile)
-      let audioReady = audioRenderer.initialize(audioDemuxer)
+      let audioDemuxer = new MP4PullAudioDemuxer(e.data.audioFile)
+      audioRenderer = new AudioRenderer(audioDemuxer)
 
-      let videoDemuxer = new MP4PullDemuxer(e.data.videoFile)
-      let videoReady = videoRenderer.initialize(videoDemuxer, e.data.canvas)
-      await Promise.all([audioReady, videoReady])
+      let videoDemuxer = new MP4PullVideoDemuxer(e.data.videoFile)
+      videoRenderer = new VideoRenderer(videoDemuxer, e.data.canvas)
+
+      await Promise.all([audioRenderer.ready, videoRenderer.ready])
+
       postMessage({
         command: 'initialize-done',
         sampleRate: audioRenderer.sampleRate,
         channelCount: audioRenderer.channelCount,
-        sharedArrayBuffer: audioRenderer.ringbuffer.buf,
+        sharedArrayBuffer: audioRenderer.ringbuffer!.buf,
       })
       break
     case 'play':

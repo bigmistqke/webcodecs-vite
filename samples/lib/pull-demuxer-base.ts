@@ -1,11 +1,9 @@
 // Constants passed to initialize() to indicate which stream should be demuxed.
-export const AUDIO_STREAM_TYPE = 0;
-export const VIDEO_STREAM_TYPE = 1;
-
+export const AUDIO_STREAM_TYPE = 0
+export const VIDEO_STREAM_TYPE = 1
 
 // Interface to be extended by concrete demuxer implementations.
 export class PullDemuxerBase {
-  
   // Starts fetching file. Resolves when enough of the file is fetched/parsed to
   // populate getDecoderConfig().
   async initialize(streamType) {}

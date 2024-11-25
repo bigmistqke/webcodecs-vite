@@ -1,10 +1,9 @@
-import { WebAudioController } from '../lib/web_audio_controller'
-import Worker from './media_worker?worker'
+import { WebAudioController } from '../lib/web-audio-controller.ts'
+import Worker from './media-worker?worker'
 
 // Transfer canvas to offscreen. Painting will be performed by worker without
 // blocking the Window main thread.
-window.$ = document.querySelector.bind(document)
-let canvas = $('canvas')
+let canvas = document.querySelector('canvas')!
 let offscreenCanvas = canvas.transferControlToOffscreen()
 
 // Instantiate the "media worker" and start loading the files. The worker will
@@ -13,14 +12,14 @@ let mediaWorker = new Worker()
 
 let initDone = false
 
-let audioController
+let audioController: WebAudioController
 
 // Set up volume slider.
-$('#volume').onchange = e => {
+document.querySelector('#volume').onchange = e => {
   audioController.setVolume(e.target.value)
 }
 
-let playButton = $('button')
+let playButton = document.querySelector('button')
 playButton.onclick = async () => {
   if (!initDone) {
     document.querySelectorAll('input[name="video_codec"]').forEach(input => (input.disabled = true))
@@ -53,7 +52,7 @@ playButton.onclick = async () => {
     })
     playButton.innerText = 'Play'
     playButton.disabled = false
-    $('#volume').disabled = false
+    document.querySelector('#volume').disabled = false
   }
 
   // Enable play now that we're loaded

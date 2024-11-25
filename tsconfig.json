@@ -7,7 +7,7 @@
     "skipLibCheck": true,
 
     /* Bundler mode */
-    "moduleResolution": "Bundler",
+    "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",

@@ -3,9 +3,21 @@ export function defer<T = void>(): Defer<T> {
   let resolved = false
   const promise = new Promise<T>(_resolve => (resolvePromise = _resolve))
   function resolve(value: T) {
-    resolved = true
-    return resolvePromise(value)
+    if (!resolved) {
+      resolved = true
+      resolvePromise(value)
+    }
   }
-  return { promise, resolve, resolved }
+  return {
+    promise,
+    resolve,
+    get resolved() {
+      return resolved
+    },
+  }
 }
-export type Defer<T> = { promise: Promise<T>; resolve: (value: T) => void; resolved: boolean }
+export type Defer<T = void> = {
+  promise: Promise<T>
+  resolve: (value: T) => void
+  resolved: boolean
+}

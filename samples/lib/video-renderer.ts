@@ -1,37 +1,36 @@
-import { VIDEO_STREAM_TYPE } from './pull_demuxer_base.js'
+import { MP4PullVideoDemuxer } from '../audio-video-player/mp4-pull-demuxer.ts'
+import { debugLog } from './debug-log.ts'
+import { defer, Defer } from './defer.ts'
 
 const FRAME_BUFFER_TARGET_SIZE = 3
 const ENABLE_DEBUG_LOGGING = false
-
-function debugLog(msg: string) {
-  if (!ENABLE_DEBUG_LOGGING) return
-  console.debug(msg)
-}
 
 // Controls demuxing and decoding of the video track, as well as rendering
 // VideoFrames to canvas. Maintains a buffer of FRAME_BUFFER_TARGET_SIZE
 // decoded frames for future rendering.
 export class VideoRenderer {
-  frameBuffer?: never[]
-  fillInProgress?: boolean
-  demuxer?: any
-  canvas?: OffscreenCanvas
-  canvasCtx?: OffscreenCanvasRenderingContext2D | null
+  frameBuffer: Array<VideoFrame> = []
+  fillInProgress = false
+  ready: Promise<void>
+  #deferredReady: Defer<void>
+  canvasCtx: OffscreenCanvasRenderingContext2D
+
   decoder?: VideoDecoder
   init_resolver?: null
 
-  async initialize(demuxer: any, canvas: OffscreenCanvas) {
-    this.frameBuffer = []
-    this.fillInProgress = false
+  constructor(public demuxer: MP4PullVideoDemuxer, public canvas: OffscreenCanvas) {
+    this.#initialize()
+    this.#deferredReady = defer()
+    this.ready = this.#deferredReady.promise
+    this.canvasCtx = this.canvas.getContext('2d')!
+  }
 
-    this.demuxer = demuxer
-    await this.demuxer.initialize(VIDEO_STREAM_TYPE)
+  async #initialize() {
+    await this.demuxer.initialize()
     const config = this.demuxer.getDecoderConfig()
 
-    this.canvas = canvas
     this.canvas.width = config.displayWidth
     this.canvas.height = config.displayHeight
-    this.canvasCtx = canvas.getContext('2d')
 
     this.decoder = new VideoDecoder({
       output: this.bufferFrame.bind(this),
@@ -42,14 +41,10 @@ export class VideoRenderer {
     console.assert(support.supported)
     this.decoder.configure(config)
 
-    this.init_resolver = null
-    let promise = new Promise(resolver => (this.init_resolver = resolver))
-
     this.fillFrameBuffer()
-    return promise
   }
 
-  render(timestamp: any) {
+  render(timestamp: number) {
     debugLog('render(%d)', timestamp)
     let frame = this.chooseFrame(timestamp)
     this.fillFrameBuffer()
@@ -101,9 +96,8 @@ export class VideoRenderer {
     if (this.frameBufferFull()) {
       debugLog('frame buffer full')
 
-      if (this.init_resolver) {
-        this.init_resolver()
-        this.init_resolver = null
+      if (!this.#deferredReady.resolved) {
+        this.#deferredReady.resolve()
       }
 
       return
@@ -118,6 +112,7 @@ export class VideoRenderer {
 
     while (
       this.frameBuffer.length < FRAME_BUFFER_TARGET_SIZE &&
+      this.decoder &&
       this.decoder.decodeQueueSize < FRAME_BUFFER_TARGET_SIZE
     ) {
       let chunk = await this.demuxer.getNextChunk()
@@ -134,12 +129,12 @@ export class VideoRenderer {
     return this.frameBuffer.length >= FRAME_BUFFER_TARGET_SIZE
   }
 
-  bufferFrame(frame: { timestamp: any }) {
+  bufferFrame(frame: VideoFrame) {
     debugLog(`bufferFrame(${frame.timestamp})`)
     this.frameBuffer.push(frame)
   }
 
-  paint(frame: any) {
+  paint(frame: VideoFrame) {
     this.canvasCtx.drawImage(frame, 0, 0, this.canvas.width, this.canvas.height)
   }
 }
