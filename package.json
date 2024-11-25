@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "typescript": "~5.6.2",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vite-plugin-mkcert": "^1.17.6"
   },
   "dependencies": {
     "mp4box": "^0.5.3"
