@@ -1,38 +1,146 @@
-<!doctype html>
-<!-- Inspired by https://webaudioapi.com/samples/ -->
-<head>
-  <title>WebCodecs API Samples</title>
-  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans"/>
-  <link rel="stylesheet" href="samples.css" type="text/css" media="screen"/>
-</head>
-<body>
-<div id="container">
-  <div id="nav"><ul><li>Samples</li></ul></div>
-  <div id="header"><h1><a href="../">WebCodecs API</a></h1></div>
-  <div id="wrapper">
-    <div id="content">
-      <article onclick="window.location.href='./video-decode-display/';">
-        <h1><a href="./video-decode-display/">Video Decoding and Display</a></h1>
-        <p>Demuxes (using mp4box.js) and decodes an mp4 file, paints to canvas ASAP</p>
-      </article>
-      <article onclick="window.location.href='./audio-video-player/audio_video_player.html';">
-        <h1><a href="./audio-video-player/audio_video_player.html">Audio And Video Player</a></h1>
-        <p>Demuxes, decodes, and renders synchronized audio and video.</p>
-      </article>
-      <article onclick="window.location.href='./image-decoder/animated-gif-renderer.html';">
-        <h1><a href="./image-decoder/animated-gif-renderer.html">Animated GIF Renderer</a></h1>
-        <p>Using ImageDecoder to implement an animated GIF renderer.</p>
-      </article>
-      <article onclick="window.location.href='./capture-to-file/capture-to-file.html';">
-        <h1><a href="./capture-to-file/capture-to-file.html">Capture To File</a></h1>
-        <p>Reading from camera, encoding via webcodecs, and creating a webm file on disk.</p>
-      </article>
-      <article onclick="window.location.href='./encode-decode-worker/index.html';">
-        <h1><a href="./encode-decode-worker/index.html">WebCodecs in Worker</a></h1>
-        <p>Capture from camera, encode and decode in a worker</p>
-      </article>
+<!DOCTYPE html>
+<html>
+  <!-- Inspired by https://webaudioapi.com/samples/ -->
+  <head>
+    <title>WebCodecs API Samples</title>
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
+    <link rel="stylesheet" href="samples.css" type="text/css" media="screen" />
+    <style>
+      body {
+        background: black;
+        font-family: 'Open Sans', sans-serif;
+        color: #ccc;
+      }
+
+      #container {
+        margin: 0 auto;
+        width: 70%;
+        background: #111;
+        padding: 20px;
+        border: 1px #222 solid;
+      }
+
+      #header h1 {
+        margin: 0;
+      }
+      #nav ul {
+        margin: 0;
+      }
+      #nav li {
+        font-weight: bold;
+        float: right;
+        list-style: none;
+        margin-left: 10px;
+      }
+
+      #header a,
+      #nav a {
+        color: rgb(28, 161, 202);
+        text-decoration: none;
+      }
+
+      #header a:hover,
+      #nav a:hover {
+        color: rgb(157, 204, 255);
+        text-decoration: underline;
+      }
+
+      a article {
+        color: #fefef2;
+        text-decoration: none;
+      }
+      a:hover article {
+        color: white;
+        text-decoration: underline;
+      }
+
+      a {
+        color: #fef0c9;
+        text-decoration: none;
+      }
+      a:hover {
+        color: #fef6e4;
+        text-decoration: underline;
+      }
+
+      article {
+        font-weight: bold;
+        margin: 20px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        color: black;
+      }
+
+      #content article:nth-child(5n + 1) {
+        background: #1768ac;
+      }
+      #content article:nth-child(5n + 2) {
+        background: #d64045;
+      }
+      #content article:nth-child(5n + 3) {
+        background: #44cf6c;
+      }
+      #content article:nth-child(5n + 4) {
+        background: #32a287;
+      }
+      #content article:nth-child(5n + 5) {
+        background: #6c464e;
+      }
+
+      .sample .name {
+        font-size: 22px;
+        padding-bottom: 5px;
+        color: #fee;
+      }
+
+      .sample .info {
+        color: #b0f0f8;
+      }
+
+      blockquote {
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="nav">
+        <ul>
+          <li>Samples</li>
+        </ul>
+      </div>
+      <div id="header">
+        <h1><a href="../">WebCodecs API</a></h1>
+      </div>
+      <div id="wrapper">
+        <div id="content">
+          <article onclick="window.location.href='./video-decode-display/';">
+            <h1><a href="./video-decode-display/">Video Decoding and Display</a></h1>
+            <p>Demuxes (using mp4box.js) and decodes an mp4 file, paints to canvas ASAP</p>
+          </article>
+          <article onclick="window.location.href='./audio-video-player/audio_video_player.html';">
+            <h1>
+              <a href="./audio-video-player/audio_video_player.html">Audio And Video Player</a>
+            </h1>
+            <p>Demuxes, decodes, and renders synchronized audio and video.</p>
+          </article>
+          <article onclick="window.location.href='./image-decoder/animated-gif-renderer.html';">
+            <h1>
+              <a href="./image-decoder/animated-gif-renderer.html">Animated GIF Renderer</a>
+            </h1>
+            <p>Using ImageDecoder to implement an animated GIF renderer.</p>
+          </article>
+          <article onclick="window.location.href='./capture-to-file/capture-to-file.html';">
+            <h1><a href="./capture-to-file/capture-to-file.html">Capture To File</a></h1>
+            <p>Reading from camera, encoding via webcodecs, and creating a webm file on disk.</p>
+          </article>
+          <article onclick="window.location.href='./encode-decode-worker/index.html';">
+            <h1><a href="./encode-decode-worker/index.html">WebCodecs in Worker</a></h1>
+            <p>Capture from camera, encode and decode in a worker</p>
+          </article>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-</body>
+  </body>
 </html>
