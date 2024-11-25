@@ -18,15 +18,21 @@ importers:
         specifier: ^2.35.2
         version: 2.35.2
     devDependencies:
+      '@types/node':
+        specifier: ^22.9.3
+        version: 22.9.3
+      '@webgpu/types':
+        specifier: ^0.1.51
+        version: 0.1.51
       typescript:
         specifier: ~5.6.2
         version: 5.6.3
       vite:
         specifier: ^5.4.10
-        version: 5.4.11
+        version: 5.4.11(@types/node@22.9.3)
       vite-plugin-mkcert:
         specifier: ^1.17.6
-        version: 1.17.6(vite@5.4.11)
+        version: 1.17.6(vite@5.4.11(@types/node@22.9.3))
 
 packages:
 
@@ -361,6 +367,12 @@ packages:
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
+
+  '@types/node@22.9.3':
+    resolution: {integrity: sha512-F3u1fs/fce3FFk+DAxbxc78DF8x0cY09RRL8GnXLmkJ1jvx3TtPdWoTT5/NiYfI5ASqXBmfqJi9dZ3gxMx4lzw==}
+
+  '@webgpu/types@0.1.51':
+    resolution: {integrity: sha512-ktR3u64NPjwIViNCck+z9QeyN0iPkQCUOQ07ZCV1RzlkfP+olLTeEZ95O1QHS+v4w9vJeY9xj/uJuSphsHy5rQ==}
 
   a-big-triangle@1.0.3:
     resolution: {integrity: sha512-AboEtoSPueZisde3Vr+7VRSfUIWBSGZUOtW3bJrOZXgIyK7dNNDdpDmOKJjg5GmJLlRKUONWV8lMgTK8MBhQWw==}
@@ -1831,6 +1843,9 @@ packages:
   uglify-to-browserify@1.0.2:
     resolution: {integrity: sha512-vb2s1lYx2xBtUgy+ta+b2J/GLVUR+wmpINwHePmPRhOsIVCG2wDzKJ0n14GslH1BifsqVzSOwQhRaCAsZ/nI4Q==}
 
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
+
   unicode-canonical-property-names-ecmascript@2.0.1:
     resolution: {integrity: sha512-dA8WbNeb2a6oQzAQ55YlT5vQAWGV9WXOsi3SskE3bcCdM0P4SDd+24zS/OCacdRq5BkdsRj9q3Pg6YyQoxIGqg==}
     engines: {node: '>=4'}
@@ -2206,6 +2221,12 @@ snapshots:
     optional: true
 
   '@types/estree@1.0.6': {}
+
+  '@types/node@22.9.3':
+    dependencies:
+      undici-types: 6.19.8
+
+  '@webgpu/types@0.1.51': {}
 
   a-big-triangle@1.0.3:
     dependencies:
@@ -4190,6 +4211,8 @@ snapshots:
   uglify-to-browserify@1.0.2:
     optional: true
 
+  undici-types@6.19.8: {}
+
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 
   unicode-match-property-ecmascript@2.0.0:
@@ -4225,22 +4248,23 @@ snapshots:
       surface-nets: 1.0.2
       triangulate-polyline: 1.0.3
 
-  vite-plugin-mkcert@1.17.6(vite@5.4.11):
+  vite-plugin-mkcert@1.17.6(vite@5.4.11(@types/node@22.9.3)):
     dependencies:
       '@octokit/rest': 20.1.1
       axios: 1.7.7(debug@4.3.7)
       debug: 4.3.7
       picocolors: 1.1.1
-      vite: 5.4.11
+      vite: 5.4.11(@types/node@22.9.3)
     transitivePeerDependencies:
       - supports-color
 
-  vite@5.4.11:
+  vite@5.4.11(@types/node@22.9.3):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.4.49
       rollup: 4.27.4
     optionalDependencies:
+      '@types/node': 22.9.3
       fsevents: 2.3.3
 
   vlq@0.2.3: {}

@@ -107,6 +107,54 @@ declare global {
     readonly frameCount: number // Number of frames in the image
     readonly repetitionCount: number // Number of times the animation repeats (-1 for infinite)
   }
+
+  declare class MediaStreamTrackProcessor<T extends VideoFrame | AudioData> {
+    /**
+     * A ReadableStream that provides the track's media frames as they are produced.
+     */
+    readonly readable: ReadableStream<T>
+
+    /**
+     * Constructs a new MediaStreamTrackProcessor for a given MediaStreamTrack.
+     */
+    constructor(track: MediaStreamTrack)
+  }
+
+  interface FilePickerAcceptType {
+    description?: string
+    accept: Record<string, string[]>
+  }
+
+  interface SaveFilePickerOptions {
+    types?: FilePickerAcceptType[]
+    excludeAcceptAllOption?: boolean
+    suggestedName?: string
+    startIn?: string
+  }
+
+  declare function showSaveFilePicker(
+    options?: SaveFilePickerOptions,
+  ): Promise<FileSystemFileHandle>
+
+  interface MediaStreamTrackGeneratorOptions {
+    /**
+     * The kind of media the track will represent.
+     * Can be 'audio' or 'video'.
+     */
+    kind: 'audio' | 'video'
+  }
+
+  class MediaStreamTrackGenerator<T extends VideoFrame | AudioData> extends MediaStreamTrack {
+    /**
+     * A WritableStream used to write media frames into the track.
+     */
+    readonly writable: WritableStream<T>
+
+    /**
+     * Constructs a new MediaStreamTrackGenerator.
+     */
+    constructor(options: MediaStreamTrackGeneratorOptions)
+  }
 }
 
 // Ensure the file is treated as a module

@@ -4,32 +4,37 @@ import Worker from './media-worker?worker'
 
 // Transfer canvas to offscreen. Painting will be performed by worker without
 // blocking the Window main thread.
-let canvas = document.querySelector('canvas')!
-let offscreenCanvas = canvas.transferControlToOffscreen()
+const canvas = document.querySelector('canvas') as HTMLCanvasElement
+const offscreenCanvas = canvas.transferControlToOffscreen()
 
 // Instantiate the "media worker" and start loading the files. The worker will
 // house and drive the demuxers and decoders.
-let mediaWorker = new Worker()
+const mediaWorker = new Worker()
+
+const playButton = document.querySelector('button') as HTMLButtonElement
+const volume = document.querySelector('#volume') as HTMLInputElement
 
 let initDone = false
 
 let audioController: WebAudioController
+let mediaTimeUpdateInterval: number | null = null
 
-// Set up volume slider.
-document.querySelector('#volume').onchange = e => {
-  audioController.setVolume(e.target.value)
+function getVideoCodec() {
+  return (document.querySelector('input[name="video_codec"]:checked') as HTMLInputElement).value
 }
 
-let playButton = document.querySelector('button')
-playButton.onclick = async () => {
+// Set up volume slider.
+volume.addEventListener('change', () => audioController.setVolume(+volume.value))
+
+playButton.addEventListener('click', async () => {
   if (!initDone) {
     document.querySelectorAll('input[name="video_codec"]').forEach(input => (input.disabled = true))
     playButton.innerText = 'Loading...'
     playButton.disabled = true
 
     // Wait for worker initialization. Use metadata to init the WebAudioController.
-    await new Promise(resolve => {
-      const videoCodec = `${document.querySelector('input[name="video_codec"]:checked').value}`
+    await new Promise<void>(resolve => {
+      const videoCodec = getVideoCodec()
       mediaWorker.postMessage(
         {
           command: 'initialize',
@@ -53,7 +58,7 @@ playButton.onclick = async () => {
     })
     playButton.innerText = 'Play'
     playButton.disabled = false
-    document.querySelector('#volume').disabled = false
+    volume.disabled = false
   }
 
   // Enable play now that we're loaded
@@ -86,14 +91,14 @@ playButton.onclick = async () => {
 
     playButton.innerText = 'Play'
   }
-}
+})
 
 // Helper function to periodically send the current media time to the media
 // worker. Ideally we would instead compute the media time on the worker thread,
 // but this requires WebAudio interfaces to be exposed on the WorkerGlobalScope.
 // See https://github.com/WebAudio/web-audio-api/issues/2423
-let mediaTimeUpdateInterval = null
-function sendMediaTimeUpdates(enabled) {
+
+function sendMediaTimeUpdates(enabled: boolean) {
   if (enabled) {
     // Local testing shows this interval (1 second) is frequent enough that the
     // estimated media time between updates drifts by less than 20 msec. Lower
@@ -109,7 +114,9 @@ function sendMediaTimeUpdates(enabled) {
       })
     }, UPDATE_INTERVAL)
   } else {
-    clearInterval(mediaTimeUpdateInterval)
-    mediaTimeUpdateInterval = null
+    if (mediaTimeUpdateInterval) {
+      clearInterval(mediaTimeUpdateInterval)
+      mediaTimeUpdateInterval = null
+    }
   }
 }

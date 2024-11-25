@@ -1,6 +1,7 @@
 import Worker from './encode-worker.ts?worker'
 
-let button = document.getElementById('record') as HTMLButtonElement
+const button = document.getElementById('record') as HTMLButtonElement
+const video = document.getElementById('src') as HTMLVideoElement
 let encodeWorker: Worker | null = null
 let stream: MediaStream | null = null
 let videoTrack: MediaStreamTrack | null = null
@@ -72,7 +73,7 @@ async function main() {
     video: { width: 1280, height: 720, frameRate: 30 },
   }
   stream = await window.navigator.mediaDevices.getUserMedia(constraints)
-  let video = document.getElementById('src')
+
   video.srcObject = stream
 }
 

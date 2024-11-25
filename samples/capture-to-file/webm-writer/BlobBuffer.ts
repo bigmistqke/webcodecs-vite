@@ -1,4 +1,7 @@
-const fs = null
+/// <reference types="node" />
+import type * as FS from 'node:fs'
+
+const fs: typeof FS | null = null
 
 /**
  * Allows a series of Blob-convertible objects (ArrayBuffer, Blob, String, etc)
@@ -15,18 +18,18 @@ const fs = null
  */
 
 export class BlobBuffer {
-  writePromise = Promise.resolve()
+  writePromise: Promise<unknown> = Promise.resolve()
   // Current seek offset
   pos = 0
   // One more than the index of the highest byte ever written
   length = 0
 
-  buffer: Array<{ offset: number; length: number }> = []
-  fd: unknown
+  buffer: Array<{ offset: number; length: number; data: Uint8Array }> = []
+  fd: number | null = null
   fileWriter: WritableStream | null = null
 
-  constructor(destination: WritableStream) {
-    if (destination && destination.constructor.name === 'FileSystemWritableFileStream') {
+  constructor(destination: number | FileSystemWritableFileStream) {
+    if (destination instanceof FileSystemWritableFileStream) {
       this.fileWriter = destination
     } else if (fs && destination) {
       this.fd = destination
@@ -73,40 +76,41 @@ export class BlobBuffer {
 
     // After previous writes complete, perform our write
     this.writePromise = this.writePromise.then(async () => {
-      if (this.fd) {
-        return new Promise((resolve, reject) => {
+      if (fs && this.fd) {
+        return new Promise<void>(resolve => {
           this.#convertToUint8Array(newEntry.data).then(dataArray => {
-            let totalWritten = 0,
-              buffer = Buffer.from(dataArray.buffer),
-              handleWriteComplete = (err: any, written: number, buffer: string | any[]) => {
-                totalWritten += written
+            let totalWritten = 0
+            const buffer = Buffer.from(dataArray.buffer)
+            const handleWriteComplete = (
+              _: unknown,
+              written: number,
+              buffer: NodeJS.TypedArray,
+            ) => {
+              totalWritten += written
 
-                if (totalWritten >= buffer.length) {
-                  resolve()
-                } else {
-                  // We still have more to write...
-                  fs.write(
-                    this.fd,
-                    buffer,
-                    totalWritten,
-                    buffer.length - totalWritten,
-                    newEntry.offset + totalWritten,
-                    handleWriteComplete,
-                  )
-                }
+              if (totalWritten >= buffer.length) {
+                resolve()
+              } else {
+                // We still have more to write...
+                fs.write(
+                  this.fd!,
+                  buffer,
+                  totalWritten,
+                  buffer.length - totalWritten,
+                  newEntry.offset + totalWritten,
+                  handleWriteComplete,
+                )
               }
+            }
 
-            fs.write(this.fd, buffer, 0, buffer.length, newEntry.offset, handleWriteComplete)
+            fs.write(this.fd!, buffer, 0, buffer.length, newEntry.offset, handleWriteComplete)
           })
         })
       } else if (this.fileWriter) {
-        console.log('this happens?')
-
-        return new Promise((resolve, reject) => {
-          this.fileWriter
-            .seek(newEntry.offset)
+        return new Promise<void>(resolve => {
+          this.fileWriter!.seek(newEntry.offset)
             .then(() => {
-              this.fileWriter.write(new Blob([newEntry.data]))
+              this.fileWriter!.write(new Blob([newEntry.data]))
             })
             .then(() => {
               resolve()
@@ -194,22 +198,22 @@ export class BlobBuffer {
   }
 
   #convertToUint8Array(thing: unknown) {
-    return new Promise((resolve, reject) => {
+    return new Promise<Uint8Array>(resolve => {
       if (thing instanceof Uint8Array) {
         resolve(thing)
       } else if (thing instanceof ArrayBuffer || ArrayBuffer.isView(thing)) {
-        resolve(new Uint8Array(thing))
+        resolve(new Uint8Array(thing as ArrayBufferLike))
       } else if (thing instanceof Blob) {
         resolve(
-          this.#readBlobAsBuffer(thing).then(function (buffer) {
-            return new Uint8Array(this.buffer)
+          this.#readBlobAsBuffer(thing).then(buffer => {
+            return new Uint8Array(buffer)
           }),
         )
       } else {
         // Assume that Blob will know how to read this thing
         resolve(
-          this.#readBlobAsBuffer(new Blob([thing])).then(function (buffer) {
-            return new Uint8Array(this.buffer)
+          this.#readBlobAsBuffer(new Blob([thing as any])).then(buffer => {
+            return new Uint8Array(buffer)
           }),
         )
       }
@@ -228,11 +232,11 @@ export class BlobBuffer {
 
   // Returns a promise that converts the blob to an ArrayBuffer
   #readBlobAsBuffer(blob: Blob) {
-    return new Promise(function (resolve, reject) {
+    return new Promise<ArrayBuffer>(function (resolve) {
       let reader = new FileReader()
 
       reader.addEventListener('loadend', function () {
-        resolve(reader.result)
+        resolve(reader.result as ArrayBuffer)
       })
 
       reader.readAsArrayBuffer(blob)

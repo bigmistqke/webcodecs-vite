@@ -3,10 +3,10 @@ import MP4Box from 'mp4box'
 // Wraps an MP4Box File as a WritableStream underlying sink.
 class MP4FileSink {
   #setStatus: (type: string, message: string) => void
-  #file: unknown
+  #file: any
   #offset = 0
 
-  constructor(file: unknown, setStatus: (type: string, message: string) => void) {
+  constructor(file: any, setStatus: (type: string, message: string) => void) {
     this.#file = file
     this.#setStatus = setStatus
   }
@@ -31,13 +31,29 @@ class MP4FileSink {
   }
 }
 
+type OnConfig = (config: {
+  codec: string
+  codedWidth: number
+  codedHeight: number
+  description: Uint8Array
+}) => void
+type OnChunk = (chunk: EncodedVideoChunk) => void
+type SetStatus = (type: string, message: string) => void
+interface Sample {
+  is_sync: boolean
+  cts: number
+  timescale: number
+  duration: number
+  data: AllowSharedBufferSource
+}
+
 // Demuxes the first video track of an MP4 file using MP4Box, calling
 // `onConfig()` and `onChunk()` with appropriate WebCodecs objects.
 export class MP4Demuxer {
-  #onConfig?: (config: unknown) => void
-  #onChunk?: (chunk: EncodedVideoChunk) => void
-  #setStatus?: (type: string, message: string) => void
-  #file = null
+  #onConfig: OnConfig
+  #onChunk: OnChunk
+  #setStatus: SetStatus
+  #file: any
 
   constructor(
     uri: RequestInfo | URL,
@@ -46,9 +62,9 @@ export class MP4Demuxer {
       onChunk,
       setStatus,
     }: {
-      onConfig: (config: unknown) => void
-      onChunk: (chunk: EncodedVideoChunk) => void
-      setStatus: (type: string, message: string) => void
+      onConfig: OnConfig
+      onChunk: OnChunk
+      setStatus: SetStatus
     },
   ) {
     this.#onConfig = onConfig
@@ -66,7 +82,7 @@ export class MP4Demuxer {
     fetch(uri).then(response => {
       // highWaterMark should be large enough for smooth streaming, but lower is
       // better for memory usage.
-      response.body.pipeTo(new WritableStream(fileSink, { highWaterMark: 2 }))
+      response.body?.pipeTo(new WritableStream(fileSink, { highWaterMark: 2 }))
     })
   }
 
@@ -104,7 +120,7 @@ export class MP4Demuxer {
     this.#file.start()
   }
 
-  #onSamples(track_id: any, ref: any, samples: any) {
+  #onSamples(track_id: any, ref: any, samples: Array<Sample>) {
     // Generate and emit an EncodedVideoChunk for each demuxed sample.
     for (const sample of samples) {
       this.#onChunk(

@@ -7,7 +7,7 @@ import { WebGPURenderer } from './renderer_webgpu.ts'
 let pendingStatus: null | Record<string, string> = null
 // Rendering. Drawing is limited to once per animation frame.
 let renderer: null | Canvas2DRenderer | WebGLRenderer | WebGPURenderer = null
-let pendingFrame: null = null
+let pendingFrame: null | VideoFrame = null
 let startTime: null | number = null
 let frameCount = 0
 
@@ -25,7 +25,7 @@ function statusAnimationFrame() {
   pendingStatus = null
 }
 
-function renderFrame(frame) {
+function renderFrame(frame: VideoFrame) {
   if (!pendingFrame) {
     // Schedule rendering in the next animation frame.
     requestAnimationFrame(renderAnimationFrame)
@@ -38,7 +38,9 @@ function renderFrame(frame) {
 }
 
 function renderAnimationFrame() {
-  renderer?.draw(pendingFrame)
+  if (pendingFrame && renderer) {
+    renderer.draw(pendingFrame)
+  }
   pendingFrame = null
 }
 

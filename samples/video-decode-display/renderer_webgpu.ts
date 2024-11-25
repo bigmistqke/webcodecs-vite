@@ -1,15 +1,24 @@
+import { defer, Defer } from '../lib/defer.ts'
+
 export class WebGPURenderer {
-  #canvas = null
-  #ctx = null
-
-  // Promise for `#start()`, WebGPU setup is asynchronous.
-  #started = null
-
   // WebGPU state shared between setup and drawing.
-  #format = null
-  #device = null
-  #pipeline = null
-  #sampler = null
+  #format: null | GPUTextureFormat = null
+  #device: null | GPUDevice = null
+  #pipeline: null | GPURenderPipeline = null
+  #sampler: null | GPUSampler = null
+
+  #canvas: OffscreenCanvas
+  #ctx: GPUCanvasContext
+  #deferredReady: Defer
+  ready: Promise<void>
+
+  constructor(canvas: OffscreenCanvas) {
+    this.#canvas = canvas
+    this.#ctx = this.#canvas.getContext('webgpu') as unknown as GPUCanvasContext
+    this.#deferredReady = defer()
+    this.ready = this.#deferredReady.promise
+    this.#start()
+  }
 
   // Generates two triangles covering the whole canvas.
   static vertexShaderSource = `
@@ -56,17 +65,11 @@ export class WebGPURenderer {
     }
   `
 
-  constructor(canvas) {
-    this.#canvas = canvas
-    this.#started = this.#start()
-  }
-
   async #start() {
     const adapter = await navigator.gpu.requestAdapter()
-    this.#device = await adapter.requestDevice()
+    this.#device = await adapter!.requestDevice()
     this.#format = navigator.gpu.getPreferredCanvasFormat()
 
-    this.#ctx = this.#canvas.getContext('webgpu')
     this.#ctx.configure({
       device: this.#device,
       format: this.#format,
@@ -91,24 +94,29 @@ export class WebGPURenderer {
 
     // Default sampler configuration is nearset + clamp.
     this.#sampler = this.#device.createSampler({})
+
+    this.#deferredReady.resolve()
   }
 
-  async draw(frame) {
+  async draw(frame: VideoFrame) {
     // Don't try to draw any frames until the context is configured.
-    await this.#started
+    await this.ready
+
+    const pipeline = this.#pipeline!
+    const device = this.#device!
 
     this.#canvas.width = frame.displayWidth
     this.#canvas.height = frame.displayHeight
 
-    const uniformBindGroup = this.#device.createBindGroup({
-      layout: this.#pipeline.getBindGroupLayout(0),
+    const uniformBindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
       entries: [
         { binding: 1, resource: this.#sampler },
-        { binding: 2, resource: this.#device.importExternalTexture({ source: frame }) },
+        { binding: 2, resource: device.importExternalTexture({ source: frame }) },
       ],
     })
 
-    const commandEncoder = this.#device.createCommandEncoder()
+    const commandEncoder = device.createCommandEncoder()
     const textureView = this.#ctx.getCurrentTexture().createView()
     const renderPassDescriptor = {
       colorAttachments: [
@@ -122,11 +130,11 @@ export class WebGPURenderer {
     }
 
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
-    passEncoder.setPipeline(this.#pipeline)
+    passEncoder.setPipeline(pipeline)
     passEncoder.setBindGroup(0, uniformBindGroup)
     passEncoder.draw(6, 1, 0, 0)
     passEncoder.end()
-    this.#device.queue.submit([commandEncoder.finish()])
+    device.queue.submit([commandEncoder.finish()])
 
     frame.close()
   }

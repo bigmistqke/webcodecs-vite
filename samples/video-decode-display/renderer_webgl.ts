@@ -1,6 +1,55 @@
 export class WebGLRenderer {
-  #canvas = null
-  #ctx = null
+  #canvas: OffscreenCanvas
+  #ctx: WebGL2RenderingContext | WebGLRenderingContext
+
+  constructor(type: 'webgl' | 'webgl2', canvas: OffscreenCanvas) {
+    this.#canvas = canvas
+    this.#ctx = canvas.getContext(type) as WebGL2RenderingContext | WebGLRenderingContext
+
+    const vertexShader = this.#ctx.createShader(this.#ctx.VERTEX_SHADER)!
+    this.#ctx.shaderSource(vertexShader, WebGLRenderer.vertexShaderSource)
+    this.#ctx.compileShader(vertexShader)
+    if (!this.#ctx.getShaderParameter(vertexShader, this.#ctx.COMPILE_STATUS)) {
+      throw this.#ctx.getShaderInfoLog(vertexShader)
+    }
+
+    const fragmentShader = this.#ctx.createShader(this.#ctx.FRAGMENT_SHADER)!
+    this.#ctx.shaderSource(fragmentShader, WebGLRenderer.fragmentShaderSource)
+    this.#ctx.compileShader(fragmentShader)
+    if (!this.#ctx.getShaderParameter(fragmentShader, this.#ctx.COMPILE_STATUS)) {
+      throw this.#ctx.getShaderInfoLog(fragmentShader)
+    }
+
+    const shaderProgram = this.#ctx.createProgram()!
+    this.#ctx.attachShader(shaderProgram, vertexShader)
+    this.#ctx.attachShader(shaderProgram, fragmentShader)
+    this.#ctx.linkProgram(shaderProgram)
+    if (!this.#ctx.getProgramParameter(shaderProgram, this.#ctx.LINK_STATUS)) {
+      throw this.#ctx.getProgramInfoLog(shaderProgram)
+    }
+    this.#ctx.useProgram(shaderProgram)
+
+    // Vertex coordinates, clockwise from bottom-left.
+    const vertexBuffer = this.#ctx.createBuffer()
+    this.#ctx.bindBuffer(this.#ctx.ARRAY_BUFFER, vertexBuffer)
+    this.#ctx.bufferData(
+      this.#ctx.ARRAY_BUFFER,
+      new Float32Array([-1.0, -1.0, -1.0, +1.0, +1.0, +1.0, +1.0, -1.0]),
+      this.#ctx.STATIC_DRAW,
+    )
+
+    const xyLocation = this.#ctx.getAttribLocation(shaderProgram, 'xy')
+    this.#ctx.vertexAttribPointer(xyLocation, 2, this.#ctx.FLOAT, false, 0, 0)
+    this.#ctx.enableVertexAttribArray(xyLocation)
+
+    // Create one texture to upload frames to.
+    const texture = this.#ctx.createTexture()
+    this.#ctx.bindTexture(this.#ctx.TEXTURE_2D, texture)
+    this.#ctx.texParameteri(this.#ctx.TEXTURE_2D, this.#ctx.TEXTURE_MAG_FILTER, this.#ctx.NEAREST)
+    this.#ctx.texParameteri(this.#ctx.TEXTURE_2D, this.#ctx.TEXTURE_MIN_FILTER, this.#ctx.NEAREST)
+    this.#ctx.texParameteri(this.#ctx.TEXTURE_2D, this.#ctx.TEXTURE_WRAP_S, this.#ctx.CLAMP_TO_EDGE)
+    this.#ctx.texParameteri(this.#ctx.TEXTURE_2D, this.#ctx.TEXTURE_WRAP_T, this.#ctx.CLAMP_TO_EDGE)
+  }
 
   static vertexShaderSource = `
     attribute vec2 xy;
@@ -25,56 +74,7 @@ export class WebGLRenderer {
     }
   `
 
-  constructor(type, canvas) {
-    this.#canvas = canvas
-    const gl = (this.#ctx = canvas.getContext(type))
-
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER)
-    gl.shaderSource(vertexShader, WebGLRenderer.vertexShaderSource)
-    gl.compileShader(vertexShader)
-    if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-      throw gl.getShaderInfoLog(vertexShader)
-    }
-
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)
-    gl.shaderSource(fragmentShader, WebGLRenderer.fragmentShaderSource)
-    gl.compileShader(fragmentShader)
-    if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-      throw gl.getShaderInfoLog(fragmentShader)
-    }
-
-    const shaderProgram = gl.createProgram()
-    gl.attachShader(shaderProgram, vertexShader)
-    gl.attachShader(shaderProgram, fragmentShader)
-    gl.linkProgram(shaderProgram)
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      throw gl.getProgramInfoLog(shaderProgram)
-    }
-    gl.useProgram(shaderProgram)
-
-    // Vertex coordinates, clockwise from bottom-left.
-    const vertexBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1.0, -1.0, -1.0, +1.0, +1.0, +1.0, +1.0, -1.0]),
-      gl.STATIC_DRAW,
-    )
-
-    const xyLocation = gl.getAttribLocation(shaderProgram, 'xy')
-    gl.vertexAttribPointer(xyLocation, 2, gl.FLOAT, false, 0, 0)
-    gl.enableVertexAttribArray(xyLocation)
-
-    // Create one texture to upload frames to.
-    const texture = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-  }
-
-  draw(frame) {
+  draw(frame: VideoFrame) {
     this.#canvas.width = frame.displayWidth
     this.#canvas.height = frame.displayHeight
 

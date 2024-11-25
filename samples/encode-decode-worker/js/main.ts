@@ -49,7 +49,6 @@ interface Metrics {
 
 let preferredResolution
 let mediaStream: MediaStream
-let bitrate = 300000
 let stopped = false
 let preferredCodec = 'H264'
 let mode = 'L1T1'
@@ -532,7 +531,7 @@ document.addEventListener(
           { type: 'stream', config: config, streams: { input: inputStream, output: outputStream } },
           [inputStream, outputStream],
         )
-      } catch (e) {
+      } catch (e: any) {
         addToEventLog(e.name + ': ' + e.message, 'fatal')
       }
     }
